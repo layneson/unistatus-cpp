@@ -5,6 +5,8 @@
 #include <cfloat>
 #include <cmath>
 
+#include <signal.h>
+
 #include <toml.h>
 #include <curl/curl.h>
 
@@ -206,6 +208,21 @@ void render_weather(Config* config, HourlyWeather weather[15]) {
     }
 }
 
+static void ctrl_c_handler(int signum) {
+	display::quit();
+
+	exit(0);
+}
+
+static void setup_handlers() {
+    struct sigaction sa = {
+        ctrl_c_handler
+    };
+
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
+}
+
 int main() {
     Config config;
     if (!load_config("config.toml", &config)) return 1;
@@ -216,6 +233,8 @@ int main() {
     if (!fetch_weather(&config, hourly_weather_15, 15)) return 1;
 
     display::init();
+
+	setup_handlers();
 
     render_weather(&config, hourly_weather_15);
 
