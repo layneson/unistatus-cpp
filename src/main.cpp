@@ -17,6 +17,7 @@
 struct Config {
     char* weather_api_key;
     char* weather_coordinates;
+	unsigned char brightness; // Between 0 and 255.
 };
 
 bool load_config(const char* filename, Config* c) {
@@ -49,6 +50,23 @@ bool load_config(const char* filename, Config* c) {
         return false;
     }
     toml_rtos(raw, &(c->weather_coordinates));
+
+	raw = toml_raw_in(config, "brightness");
+	if (!raw) {
+		printf("> Did not find brightness, using default.\n");
+		c->brightness = 128;
+	} else {
+		int64_t brightness_toml;
+		if (toml_rtoi(raw, &brightness_toml) != 0) {
+			fprintf(stderr, "[!] Expected number for brightness!\n");
+			return false;
+		}
+		if (brightness_toml < 0 || brightness_toml > 255) {
+			fprintf(stderr, "[!] Expected brightness to be in range [0, 255]!\n");
+			return false;
+		}
+		c->brightness = (unsigned char) brightness_toml;
+	}
 
     toml_free(config);
 
@@ -228,11 +246,14 @@ int main() {
     if (!load_config("config.toml", &config)) return 1;
     printf("> Weather API key: %s\n", config.weather_api_key);
     printf("> Weather coordinates: %s\n", config.weather_coordinates);
+	printf("> Brightness: %u\n", config.brightness);
 
     HourlyWeather hourly_weather_15[15] = { 0 };
     if (!fetch_weather(&config, hourly_weather_15, 15)) return 1;
 
     display::init();
+
+	display::set_brightness(config.brightness);
 
 	setup_handlers();
 
